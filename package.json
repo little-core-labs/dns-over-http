@@ -1,5 +1,5 @@
 {
-  "name": "dns-over-https",
+  "name": "dns-over-http",
   "version": "0.1.0",
   "description": "DNS client and server over HTTP",
   "main": "index.js",
@@ -9,6 +9,7 @@
   "keywords": [
     "dns",
     "over",
+    "http",
     "https",
     "doh",
     "server"
