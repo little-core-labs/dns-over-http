@@ -1,6 +1,6 @@
 {
   "name": "dns-over-http",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DNS client and server over HTTP",
   "main": "index.js",
   "scripts": {
