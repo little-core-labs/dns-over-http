@@ -1,6 +1,6 @@
 {
   "name": "dns-over-https",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "DNS client and server over HTTP",
   "main": "index.js",
   "scripts": {
@@ -23,7 +23,5 @@
     "lru-cache": "^4.1.2",
     "random-int": "^1.0.0"
   },
-  "devDependencies": {
-    "pem": "^1.12.5"
-  }
+  "devDependencies": {}
 }

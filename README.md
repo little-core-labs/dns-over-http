@@ -92,9 +92,17 @@ where `opts` can be:
 
 Make a DNS resolution query request. Options are passed directly to the
 `http.request` function. `questions` are given to a
-[dns-packet][https://github.com/mafintosh/dns-packet] encoding and sent
+[dns-packet](https://github.com/mafintosh/dns-packet) encoding and sent
 as a `POST` request with a `'application/dns-udpwireformat'` content
 type.
+
+# See Also
+
+* [dns-packet](https://github.com/mafintosh/dns-packet)
+* [dns-socket](https://github.com/mafintosh/dns-socket)
+* [DNS over HTTPS](https://en.wikipedia.org/wiki/DNS_over_HTTPS)
+* [1.1.1.1](https://developers.cloudflare.com/1.1.1.1/dns-over-https/)
+* [Google Public DNS](https://dns.google.com/)
 
 # License
 
