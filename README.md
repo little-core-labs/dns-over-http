@@ -1,4 +1,4 @@
-dns-over-https
+dns-over-http
 ==============
 
 HTTP(s) middleware and client for DNS over HTTPS (DoH)
@@ -20,7 +20,7 @@ requests. This module is a ***work-in-progres***.
 # Installation
 
 ```sh
-$ npm install dns-over-https
+$ npm install dns-over-http
 ```
 
 # Usage
@@ -29,7 +29,7 @@ $ npm install dns-over-https
 
 ```js
 const https = require('https')
-const doh = require('dns-over-https')
+const doh = require('dns-over-http')
 
 const serverOptions = getServerOptions() // with cert and key
 const server = https.createServer(serverOptions, doh({
@@ -53,7 +53,7 @@ balancer or nginx instance configured SSL certificates.
 
 
 ```js
-const doh = require('dns-over-https')
+const doh = require('dns-over-http')
 const url = 'https://dns.google.com:443/experimental'
 
 const results = []
