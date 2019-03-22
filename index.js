@@ -1,5 +1,7 @@
 const { EventEmitter } = require('events')
+const isBrowser = require('is-browser')
 const DNSSocket = require('dns-socket')
+const accept = require('accept')
 const extend = require('extend')
 const packet = require('dns-packet')
 const debug = require('debug')('dns-over-http')
@@ -7,8 +9,10 @@ const randi = require('random-int')
 const store = require('./store')
 const https = require('https')
 const http = require('http')
+const cors = require('cors')
 const lru = require('lru-cache')
 const url = require('url')
+const qs = require('qs')
 
 const kRequestContentType = 'application/dns-udpwireformat'
 
@@ -24,7 +28,8 @@ function doh(opts, cb) {
     opts = {}
   }
 
-  const handle = mix(onrequest, EventEmitter)
+  const preamble = (req, res) => cors()(req, res, () => onrequest(req, res))
+  const handle = mix(preamble, EventEmitter)
 
   if (opts.server) {
     opts.servers = Array.isArray(opts.server) ? opts.server : [opts.server]
@@ -45,28 +50,52 @@ function doh(opts, cb) {
   return handle
 
   function onrequest(req, res) {
+    const accepts = accept.parseAll(req.headers)
     const socket = new DNSSocket()
+    const query = qs.parse(req.url.split('?')[1])
     const rinfo = req.socket.address()
+
+    if (kRequestContentType === accepts[0]) {
+      res.setHeader('Content-Type', kRequestContentType)
+    } else {
+      res.setHeader('Content-Type', 'text/json')
+    }
 
     debug("onrequest:", rinfo)
 
     req.on('readable', onreadable)
-    socket.on('error', onerror)
-    socket.on('query', onquery)
+    req.on('data', ondata)
+
     socket.on('response', onresponse)
+    socket.on('query', onquery)
+    socket.on('error', onerror)
 
     handle.emit('request', req, res)
     handle.emit('socket', socket)
+
+    if (query && query.type && query.name) {
+      ondata(createPacket({ questions: [ query ] }))
+    }
 
     function onerror(err) {
       debug("onerror:", err)
       handle.emit('error', err)
     }
 
+    function ondata(buffer) {
+      try {
+        const payload = JSON.parse(buffer)
+        buffer = createPacket(payload)
+      } catch (err) {
+      }
+
+      socket.socket.emit('message', buffer, rinfo)
+    }
+
     function onreadable() {
       debug("onreadable")
       for (let buffer = req.read(); buffer; buffer = req.read()) {
-        socket.socket.emit('message', buffer, rinfo)
+        ondata(buffer)
       }
     }
 
@@ -78,7 +107,25 @@ function doh(opts, cb) {
         }
       }
 
-      res.end(packet.encode(query))
+      if (kRequestContentType === accepts[0]) {
+        res.end(packet.encode(query))
+      } else {
+        query.answers = query.answers.map((answer) => Object.assign(answer, {
+          data: serialize(answer.data)
+        }))
+
+        res.end(JSON.stringify(query))
+
+        function serialize(data) {
+          if (Buffer.isBuffer(data)) {
+            return data.toString('base64')
+          } else if (Array.isArray(data)) {
+            return data.map(serialize)
+          } else {
+            return data
+          }
+        }
+      }
     }
 
     function onquery(query, port, address) {
@@ -136,6 +183,12 @@ function doh(opts, cb) {
             break
 
           case 'TXT':
+            answers.push({
+              type: 'TXT',
+              name: question.name,
+              ttl: record.ttl,
+              data: record.data
+            })
             break
         }
       }
@@ -211,7 +264,11 @@ function request(opts, cb) {
   }
 
   const req = opts.https.request(opts, onresponse)
-  if ('function' == typeof cb) { req.on('error', (err) => cb(err)) }
+
+  if ('function' == typeof cb) {
+    req.on('error', (err) => cb(err))
+  }
+
   req.write(opts.packet)
   req.end()
   return req
@@ -220,7 +277,8 @@ function request(opts, cb) {
     const defaults = {
       method: 'POST',
       headers: {
-        'Content-Type': kRequestContentType,
+        'Accept': isBrowser ? 'application/json' : kRequestContentType,
+        'Content-Type': isBrowser ? 'application/json' : kRequestContentType,
         'Content-Length': Buffer.byteLength(opts.packet)
       }
     }
@@ -246,7 +304,15 @@ function request(opts, cb) {
         }
         req.emit('packet', payload)
       } catch (err) {
-        req.emit('error', err)
+        try {
+          const payload = JSON.parse(data)
+          if ('function' == typeof cb) {
+            cb(null, payload)
+          }
+          req.emit('packet', payload)
+        } catch (err) {
+          req.emit('error', err)
+        }
       }
     })
   }
@@ -256,12 +322,19 @@ function createPacket(opts) {
   if (!opts || 'object' != typeof opts) {
     throw new TypeError("Expecting an object")
   }
-  return packet.encode(extend(true, {
+
+  const encoded = packet.encode(extend(true, {
     // defaults
     flags: packet.RECURSION_DESIRED,
     type: 'query',
     id: randi(0x0, 0xffff),
   }, opts))
+
+  if (isBrowser) {
+    return Buffer.from(JSON.stringify(packet.decode(encoded)))
+  }
+
+  return encoded
 }
 
 function query(opts, questions, cb) {
