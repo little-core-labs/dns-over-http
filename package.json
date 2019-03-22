@@ -17,14 +17,19 @@
   "author": "Joseph Werle <joseph.werle@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "accept": "^3.1.3",
+    "cors": "^2.8.5",
     "debug": "^3.1.0",
     "dns-packet": "^4.2.0",
     "dns-socket": "^3.0.0",
     "extend": "^3.0.1",
     "lru-cache": "^4.1.2",
+    "qs": "^6.6.0",
     "random-int": "^1.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "is-browser": "^2.1.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jwerle/dns-over-http.git"
